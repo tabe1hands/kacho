@@ -10,46 +10,16 @@
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
 
-import os
 import sys
-import base64
-import functools
 from optparse import OptionParser, OptionValueError
 
-from twisted.application import service, internet
 from twisted.python import log
 from twisted.internet import reactor
 import cyclone.web
 
 import kacho
-from kacho.lib import check, file as kfile
-
-def BasicAuth(method):
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
-        try:
-            auth_type, auth_data = self.request.headers["Authorization"].split()
-            assert auth_type == "Basic"
-            usr, pwd = base64.b64decode(auth_data).split(":", 1)
-            assert usr == "user@domain"
-            assert pwd == "password"
-        except:
-            raise cyclone.web.HTTPAuthenticationRequired
-        else:
-            return method(self, *args, **kwargs)
-    return wrapper
-
-class IndexHandler(cyclone.web.RequestHandler):
-    @BasicAuth
-    def get(self):
-        self.finish("ok\r\n")
-
-class Application(cyclone.web.Application):
-    def __init__(self):
-        handlers = [
-            (r"/", IndexHandler),
-        ]
-        cyclone.web.Application.__init__(self, handlers)
+from kacho.lib import check, filedata
+from kacho.urls import urls
 
 def get_options():
     usage = "%prog [options]"
@@ -124,10 +94,14 @@ def check_config(config):
     return normal
 
 def build_in_server(config_data):
-    log.startLogging(sys.stdout)
     reactor.listenTCP(int(config_data['server.port']), Application())
     reactor.run()
     return True
+
+class Application(cyclone.web.Application):
+    def __init__(self):
+        handlers = urls
+        cyclone.web.Application.__init__(self, handlers)
 
 if __name__ == "__main__":
     # オプション解析
@@ -138,15 +112,19 @@ if __name__ == "__main__":
     config_path = opts.config_path
 
     # 設定ファイル読み込み
-    _f = kfile.k2v.Open(config_path)
+    _f = filedata.k2v.Open(config_path)
     config_data = _f.read()
 
     if not check_config(config_data):
         sys.exit(2)
 
+    # ロギング
+    #log.startLogging(sys.stdout)
+
     # サーバー実行
     build_in_server(config_data)
 else:
+    from twisted.application import service, internet
     # TODO 環境変数
     application = service.Application("auth-basic")
     internet.TCPServer(int(config_data['server.port']), Application(),

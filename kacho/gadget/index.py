@@ -1,4 +1,3 @@
-# coding: utf-8
 # This file is part of Kacho
 #
 # Copyright (C) 2011 Junichi Shinohara <tabe1hands@gmail.com>
@@ -8,9 +7,12 @@
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
 
-__version__ = '0.1'
-__release__ = '1'
+from kacho.lib.web import Rest, basic_auth
 
-import os
-dirname = os.path.dirname(__file__)
-del os
+class Index(Rest):
+
+    @basic_auth
+    def _get(self):
+        return {'title': 'Index'}
+
+urls = [(r"/index.html", Index)]
