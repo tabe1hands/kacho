@@ -1,0 +1,4 @@
+[python: kacho/**.py]
+[python: bin/**.py]
+[mako: kacho/templates/**.*]
+input_encoding = utf-8
